@@ -1,0 +1,9 @@
+{
+    "OSC": {
+        "host": "localhost",
+        "port": 8000
+    },
+    "MIDI": {
+        "device": "X-Touch"
+    }
+}
