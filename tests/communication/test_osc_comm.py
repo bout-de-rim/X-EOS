@@ -1,5 +1,5 @@
 import unittest
-from src.communication.osc_comm import OSCClient
+from communication.osc_comm import OSCClient
 
 class TestOSCClient(unittest.TestCase):
 

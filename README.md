@@ -12,6 +12,7 @@ X-EOS is a Python-based driver that bridges the gap between Behringer's X-Touch 
 - [Development](#development)
   - [Project Structure](#project-structure)
   - [Tool and Library Selection](#tool-and-library-selection)
+  - [Testing with pytest](#testing-with-pytest)
 - [Contribution](#contribution)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
@@ -62,6 +63,30 @@ Refer to the provided [project skeleton](#project-skeleton-link) for a detailed 
 
 The project primarily uses `python-osc` for OSC communication, `mido` for MIDI operations, and other Python libraries for functionalities like JSON handling, observer pattern implementation, and multi-threading.
 
+### Testing with pytest
+
+X-EOS adopts `pytest` as its primary testing framework. 
+
+To run the tests:
+
+```bash
+pytest
+```
+
+For a detailed output, use:
+
+```bash
+pytest -v
+```
+
+**Note:** If you face any import issues related to module resolution, ensure to adjust your `PYTHONPATH` to include the `src` directory:
+
+```bash
+$env:PYTHONPATH += ";path-to-your-X-EOS-folder\src"
+```
+
+Replace `path-to-your-X-EOS-folder` with the actual path to the `X-EOS` project directory on your system.
+
 ## Contribution
 
 Contributions are always welcome! Please fork the repository, make your changes, and submit a pull request.
@@ -70,11 +95,3 @@ Contributions are always welcome! Please fork the repository, make your changes,
 
 [MIT License](LICENSE) - See the LICENSE file for details.
 
-## Acknowledgments
-
-- The wonderful OpenAI community for guidance and discussions.
-- [ETC](https://www.etcconnect.com/) and [Behringer](https://www.behringer.com/) for their incredible products.
-
----
-
-Replace `[repository_url]` with the actual URL of your project's repository. The `#project-skeleton-link` should be linked to a detailed documentation or a wiki page that explains the project structure if necessary. Modify and expand as you see fit!
