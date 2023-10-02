@@ -34,7 +34,7 @@ X-EOS is a Python-based driver that bridges the gap between Behringer's X-Touch 
 
 1. Clone the X-EOS repository:
 ```bash
-git clone [repository_url]
+git clone bout-de-rim/X-EOS
 ```
 2. Navigate to the project directory and install the required packages:
 ```bash
