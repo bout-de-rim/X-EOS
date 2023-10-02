@@ -38,7 +38,7 @@ class OSCClient:
 
     def send_eos_live_key(self):
         """
-        Sends a command to press the 'LIVE' key on EOS.
+        Sends a command to press and release the 'LIVE' key on EOS.
         """
         self.send_message("/eos/user/1/key/LIVE", 1)
         self.send_message("/eos/user/1/key/LIVE", 0)
