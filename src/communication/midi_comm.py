@@ -87,3 +87,12 @@ class MIDIClient:
         - message: MidiMessage - A mido.MidiMessage object to be sent.
         """
         self.output_port.send(message)
+
+    def send_midi_hex(self, message):
+        """
+        Send a MIDI message to X-Touch.
+
+        Parameters:
+        - message: bytes - A bytes object to be sent.
+        """
+        self.send_midi_message(mido.Message.from_hex(message))

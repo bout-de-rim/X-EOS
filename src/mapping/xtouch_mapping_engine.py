@@ -4,8 +4,9 @@ Manages mapping of X-Touch data to internal states.
 
 import os
 from utils.json_handler import read_json
+from observer import Observer
 
-class XTouchMappingEngine:
+class XTouchMappingEngine(Observer):
     """
     Processes and maps X-Touch commands to internal states.
 
@@ -19,6 +20,17 @@ class XTouchMappingEngine:
         self.state_manager = state_manager
         self.midi_id_map, self.midi_value_map = self.load_midi2mcu_map()
         self.mcu2semantic_map = self.load_mcu2semantic_map()
+        self._midi_comm = None
+
+    def update(self, message):
+        if message["type"] == "goLive":
+            print("sending goLive to X-Touch")
+            self._midi_comm.send_midi_hex("90 34 7F")
+            self._midi_comm.send_midi_hex("90 35 00")
+        elif message["type"] == "goBlind":
+            print("sending goBlind to X-Touch")
+            self._midi_comm.send_midi_hex("90 34 00")
+            self._midi_comm.send_midi_hex("90 35 7F")
 
     def load_midi2mcu_map(self):
         """

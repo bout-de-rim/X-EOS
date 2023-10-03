@@ -4,6 +4,6 @@
         "port": 8000
     },
     "MIDI": {
-        "device_pattern": "EOS"
+        "device_pattern": "X-Touch"
     }
 }

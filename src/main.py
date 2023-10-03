@@ -17,12 +17,16 @@ if __name__ == "__main__":
         osc = OSCClient()
         xtouch_mapping = XTouchMappingEngine(state_manager)
         midi = MIDIClient("config/settings.json", xtouch_mapping.handle_midi_message)
-        eos_mapping = EOSMappingEngine(osc_client=osc)
+        xtouch_mapping._midi_comm = midi
+        eos_mapping = EOSMappingEngine(osc_client=osc, state_manager=state_manager)
         state_manager.add_observer(eos_mapping)
+        state_manager.add_observer(xtouch_mapping)
+        print(f"State Manager initialized with {len(state_manager._observers)} observers.")
+        osc.start_server("/eos", eos_mapping.eos_osc_handler)
 
         # Simulating a key press
-        state_manager.key_pressed("LIVE")
-        state_manager.key_pressed("LIVE",0)
+        #state_manager.key_pressed("LIVE")
+        #state_manager.key_pressed("LIVE",0)
     
         print("Waiting for MIDI messages. Press Ctrl+C to exit.")
         while True:

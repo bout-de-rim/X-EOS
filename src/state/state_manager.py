@@ -41,5 +41,16 @@ class StateManager(Subject):
         """
         Update state based on key press and notify observers.
         """
+        if self.programmer_state == "LIVE":
+            return
         self.programmer_state = "LIVE"
         self.notify_observers({"type": "goLive"})
+
+    def goBlind(self):
+        """
+        Update state based on key press and notify observers.
+        """
+        if self.programmer_state == "BLIND":
+            return
+        self.programmer_state = "BLIND"
+        self.notify_observers({"type": "goBlind"})
