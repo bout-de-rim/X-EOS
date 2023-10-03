@@ -1,5 +1,9 @@
 {
     "switch": {
+        "values": {
+            "00": "Released",
+            "7F": "Pressed"
+        },
         "90 00": "Rec/Rdy 1",
         "90 01": "Rec/Rdy 2",
         "90 02": "Rec/Rdy 3",

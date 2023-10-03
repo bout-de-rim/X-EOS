@@ -21,6 +21,9 @@ class StateManager(Subject):
             'keys': {},
             # ... any other initial state items based on EOS semantics
         }
+        # the EOS programmer state LIVE, BLIND, STAGINGMODE, unknown
+        self.programmer_state = "unknown"
+
 
     def key_pressed(self, key_name, value=1):
         """
@@ -30,6 +33,13 @@ class StateManager(Subject):
         - key_name: The name of the key pressed.
         - value: The value associated with the key press (e.g., 1 for pressed).
         """
+        print("key pressed: ", key_name, value)
         self.state['keys'][key_name] = value
         self.notify_observers({"type": "key_press", "key": key_name, "value": value})
 
+    def goLive(self):
+        """
+        Update state based on key press and notify observers.
+        """
+        self.programmer_state = "LIVE"
+        self.notify_observers({"type": "goLive"})

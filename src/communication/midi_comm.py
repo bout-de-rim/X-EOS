@@ -36,7 +36,6 @@ class MIDIClient:
     - get_available_midi_ports(): Retrieve available MIDI ports.
     - initialize_midi_ports(): Initialize input and output MIDI ports.
     - send_midi_message(): Send a MIDI message to X-Touch.
-    - listen_midi(): Continuously listen to MIDI messages from X-Touch.
     """
 
     def __init__(self, config_file, message_callback=example_callback):
@@ -88,51 +87,3 @@ class MIDIClient:
         - message: MidiMessage - A mido.MidiMessage object to be sent.
         """
         self.output_port.send(message)
-
-    def listen_midi(self):
-        """
-        Continuously listen to MIDI messages from X-Touch.
-        Note: This function should ideally run in a separate thread to prevent blocking.
-        """
-        for message in self.input_port.iter_pending():
-            self.process_midi_message(message)
-
-    def process_midi_message(self, message):
-        """
-        Process a received MIDI message.
-        To be implemented according to the application needs.
-
-        Parameters:
-        - message: MidiMessage - The received MIDI message.
-        """
-        # Implementation according to application needs
-        pass
-
-# Example usage and testing code
-if __name__ == "__main__":
-    try:
-        client = MIDIClient("config/settings.json", message_callback=example_callback)
-
-        # Create a message
-        msg = mido.Message('note_on', note=60)
-
-        # Send a message
-        client.send_midi_message(msg)
-
-        print("Waiting for MIDI messages. Press Ctrl+C to exit.")
-        while True:
-            # The application is kept alive and running by this loop.
-            # The callback handles all incoming messages.
-            # You may also add additional periodic checks or functionality here.
-            time.sleep(1)  # Prevents CPU from running at 100% and provides a slight delay in the loop.
-
-    except ValueError as e:
-        print(e)
-    except KeyboardInterrupt:
-        print("Exiting.")
-    finally:
-        # Cleanup: Ensure to close MIDI ports properly to free up resources.
-        if client and client.input_port:
-            client.input_port.close()
-        if client and client.output_port:
-            client.output_port.close()
