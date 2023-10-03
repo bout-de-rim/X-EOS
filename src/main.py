@@ -7,14 +7,16 @@ from communication.osc_comm import OSCClient
 from state.state_manager import StateManager
 from mapping.eos_mapping_engine import EOSMappingEngine
 from communication.midi_comm import MIDIClient
+from mapping.xtouch_mapping_engine import XTouchMappingEngine
 import time
 
 if __name__ == "__main__":
     try:
         # Initialization
-        osc = OSCClient()
-        midi = MIDIClient("config/settings.json")
         state_manager = StateManager()
+        osc = OSCClient()
+        xtouch_mapping = XTouchMappingEngine(state_manager)
+        midi = MIDIClient("config/settings.json", xtouch_mapping.handle_midi_message)
         eos_mapping = EOSMappingEngine(osc_client=osc)
         state_manager.add_observer(eos_mapping)
 

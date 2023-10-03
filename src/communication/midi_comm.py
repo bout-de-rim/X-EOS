@@ -12,6 +12,17 @@ from mido import MidiFile, MidiTrack
 from utils import read_json
 import time
 
+
+# Example usage and testing code
+def example_callback(msg):
+    """
+    An example callback function that prints the received MIDI message.
+
+    Parameters:
+    - msg: MidiMessage - The received MIDI message.
+    """
+    print(f"Received: {msg}")
+
 class MIDIClient:
     """
     Establishes and manages a MIDI client for communication with X-Touch.
@@ -28,7 +39,7 @@ class MIDIClient:
     - listen_midi(): Continuously listen to MIDI messages from X-Touch.
     """
 
-    def __init__(self, config_file, message_callback=None):
+    def __init__(self, config_file, message_callback=example_callback):
         """
 
         """
@@ -96,17 +107,6 @@ class MIDIClient:
         """
         # Implementation according to application needs
         pass
-
-
-# Example usage and testing code
-def example_callback(msg):
-    """
-    An example callback function that prints the received MIDI message.
-
-    Parameters:
-    - msg: MidiMessage - The received MIDI message.
-    """
-    print(f"Received: {msg}")
 
 # Example usage and testing code
 if __name__ == "__main__":
