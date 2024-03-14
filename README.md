@@ -46,6 +46,11 @@ pip install -r requirements.txt
 
 Modify the `settings.json` file within the `config` directory to match your OSC and MIDI setups. Ensure the correct hostname, port, and device names are set.
 
+Configure EOS in Setup>System>ShowControl>OSC : 
+* Enable RX and TX, 
+* configure RX port accordingly to settings.json, 
+* configure TX port accordingly to what says X-EOS at launch. 
+
 ## Usage
 
 Run the main script to initialize the X-EOS system:

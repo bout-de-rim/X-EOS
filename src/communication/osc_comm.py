@@ -33,7 +33,7 @@ class OSCClient:
 
     def start_server(self, root, callback=dummy_callback, initial_port=8003):
         """
-        Starts an OSC server on the specified port.
+        Starts an UDP OSC server on the specified port.
 
         Args:
         - callback: The callback function to be called when a message is received.
@@ -48,7 +48,7 @@ class OSCClient:
                 self._server = osc_server.ThreadingOSCUDPServer(
                     ('127.0.0.1', port), self._dispatcher
                 )
-                print(f"OSC Server started at {self._server.server_address}")
+                print(f"UDP OSC Server started at {self._server.server_address}")
                 self._server.serve_forever()
                 break  # Exit the loop if server starts successfully
             except (socket.error, OSError) as e:
