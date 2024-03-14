@@ -49,6 +49,7 @@ class OSCClient:
                     ('127.0.0.1', port), self._dispatcher
                 )
                 print(f"UDP OSC Server started at {self._server.server_address}")
+                print(f"This is the values for OSC UDP TX in EOS. ")
                 self._server.serve_forever()
                 break  # Exit the loop if server starts successfully
             except (socket.error, OSError) as e:
