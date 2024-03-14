@@ -38,32 +38,40 @@ class MIDIClient:
     - send_midi_message(): Send a MIDI message to X-Touch.
     """
 
-    def __init__(self, config_file, message_callback=example_callback):
+    def __init__(self, logger, config_file, message_callback=example_callback):
         """
 
         """
         self.config = read_json(config_file)
-        self.device_pattern = self.config.get("MIDI", {}).get("device_pattern", ".*")
+        self.device_patterns = self.config.get("MIDI", {}).get("device_pattern", ".*")
         self.input_port = None
         self.output_port = None
         self.message_callback = message_callback
+        self.logger = logger
 
         self.initialize_midi_ports()
 
     def initialize_midi_ports(self):
         input_ports, output_ports = self.get_available_midi_ports()
-
-        matching_input_ports = [port for port in input_ports if re.match(self.device_pattern, port)]
-        matching_output_ports = [port for port in output_ports if re.match(self.device_pattern, port)]
-
-        if not matching_input_ports or not matching_output_ports:
-            raise ValueError(f"No MIDI ports match the pattern '{self.device_pattern}'.")
         
-        # Selecting the first matching port for simplicity, can be adjusted based on requirements
-        self.input_port = mido.open_input(matching_input_ports[0], callback=self.message_callback)
-        self.output_port = mido.open_output(matching_output_ports[0])
+        # Parcourt toutes les expressions régulières fournies dans l'ordre de priorité
+        for pattern in self.device_patterns:
+            matching_input_ports = [port for port in input_ports if re.match(pattern, port)]
+            matching_output_ports = [port for port in output_ports if re.match(pattern, port)]
 
-        print(f"Initialized MIDI ports: {matching_input_ports[0]} (input) and {matching_output_ports[0]} (output).")
+            # Essaye d'initialiser les ports un par un jusqu'à ce que ça fonctionne ou que tous soient épuisés
+            if matching_input_ports and matching_output_ports:
+                try:
+                    self.logger.info(f"Trying MIDI ports: {matching_input_ports[0]} (input) and {matching_output_ports[0]} (output).")
+                    self.input_port = mido.open_input(matching_input_ports[0], callback=self.message_callback)
+                    self.output_port = mido.open_output(matching_output_ports[0])
+                    self.logger.info(f"Initialized MIDI ports: {matching_input_ports[0]} (input) and {matching_output_ports[0]} (output).")
+                    break  # Sort de la boucle si réussi
+                except IOError as e:  # mido peut lancer une IOError si le port ne peut pas être ouvert
+                    self.logger.warning(f"Error opening MIDI ports: {e}. Trying next available port...")
+        else:  # Ce 'else' s'exécute si la boucle 'for' se termine normalement, sans 'break'
+            raise ValueError(f"No MIDI ports match the given patterns or all ports are in use.")
+
 
     @staticmethod
     def get_available_midi_ports():

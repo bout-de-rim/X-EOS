@@ -5,6 +5,7 @@ Uses the python-osc library for communication.
 
 from pythonosc import udp_client, dispatcher, osc_server
 import socket
+import logging
 
 class OSCClient:
     """
@@ -15,7 +16,7 @@ class OSCClient:
     - port: The port for OSC communication.
     """
 
-    def __init__(self, host='127.0.0.1', port=8000):
+    def __init__(self, logger, host='127.0.0.1', port=8000):
         """
         Constructor for OSCClient.
 
@@ -24,12 +25,13 @@ class OSCClient:
         - port: The port for OSC communication. Defaults to 8000.
         """
         self._client = udp_client.SimpleUDPClient(host, port)
+        self.logger = logger
 
     def dummy_callback(self, unused_addr, *args):
         """
         A dummy callback function for the OSC server.
         """
-        print(f"OSC Server received: {args}")
+        self.logger.debug(f"OSC Server received: {args}")
 
     def start_server(self, root, callback=dummy_callback, initial_port=8003):
         """
@@ -48,12 +50,12 @@ class OSCClient:
                 self._server = osc_server.ThreadingOSCUDPServer(
                     ('127.0.0.1', port), self._dispatcher
                 )
-                print(f"UDP OSC Server started at {self._server.server_address}")
-                print(f"This is the values for OSC UDP TX in EOS. ")
+                self.logger.info(f"UDP OSC Server started at {self._server.server_address}")
+                self.logger.info(f"This is the values for OSC UDP TX in EOS. ")
                 self._server.serve_forever()
                 break  # Exit the loop if server starts successfully
             except (socket.error, OSError) as e:
-                print(f"Port {port} is in use, trying {port + 1}...")
+                self.logger.warning(f"Port {port} is in use, trying {port + 1}...")
                 port += 1  # Increment port and try again
 
     def send_message(self, address, value):

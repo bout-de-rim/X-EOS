@@ -16,21 +16,22 @@ class XTouchMappingEngine(Observer):
     - midi_value_map: Dictionary mapping element_type to {hexvalue: value}.
     """
 
-    def __init__(self, state_manager):
+    def __init__(self, logger, state_manager):
         self.state_manager = state_manager
         self.midi_id_map, self.midi_value_map = self.load_midi2mcu_map()
         self.mcu2semantic_map = self.load_mcu2semantic_map()
         self._midi_comm = None
+        self.logger = logger
 
     def update(self, message):
         if message["type"] == "goLive":
-            print("sending goLive to X-Touch")
-            self._midi_comm.send_midi_hex("90 34 7F")
-            self._midi_comm.send_midi_hex("90 35 00")
+            self.logger.debug("sending goLive to X-Touch")
+            self._midi_comm.send_midi_hex("90 3E 7F")
+            self._midi_comm.send_midi_hex("90 3F 00")
         elif message["type"] == "goBlind":
-            print("sending goBlind to X-Touch")
-            self._midi_comm.send_midi_hex("90 34 00")
-            self._midi_comm.send_midi_hex("90 35 7F")
+            self.logger.debug("sending goBlind to X-Touch")
+            self._midi_comm.send_midi_hex("90 3E 00")
+            self._midi_comm.send_midi_hex("90 3F 7F")
 
     def load_midi2mcu_map(self):
         """
@@ -87,12 +88,12 @@ class XTouchMappingEngine(Observer):
         elif id2Bytes in self.midi_id_map:
             (id,type), hexvalue = (self.midi_id_map[id2Bytes], " ".join(values[1::]))
         else:
-            print(f"No mapped MCU for MIDI message: {message}")
+            self.logger.warning(f"No mapped MCU for MIDI message: {message}")
             return None
         if type in self.midi_value_map:
             value = self.midi_value_map[type].get(hexvalue, None)
         else:
-            print(self.midi_value_map)
+            self.logger.info(self.midi_value_map)
             value = hexvalue
         return (type, id, value)
 
@@ -114,6 +115,6 @@ class XTouchMappingEngine(Observer):
                     elif value == "Released":
                         self.state_manager.key_pressed(self.mcu2semantic_map[id], 0)
             else:
-                print(f"No mapped action for {type} '{id}' '{value}'")
+                self.logger.info(f"No mapped action for {type} '{id}' '{value}'")
         except ValueError as e:
-            print(e)
+            self.logger.error(e)
