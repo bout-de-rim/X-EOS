@@ -108,21 +108,16 @@
         "90 65": "Scrub",
         "90 66": "User switch A",
         "90 67": "User switch B",
-        "90 68": "fader touch 1",
-        "90 69": "fader touch 2",
-        "90 6A": "fader touch 3",
-        "90 6B": "fader touch 4",
-        "90 6C": "fader touch 5",
-        "90 6D": "fader touch 6",
-        "90 6E": "fader touch 7",
-        "90 6F": "fader touch 8",
-        "90 70": "fader touch Master", 
         "90 71": "SMPTE LED",
         "90 72": "Beats LED",
         "90 73": "RUDE SOLO LED",
         "90 74": "RELAY Click"
     },
     "Vpot": {
+        "values": {
+            "00": "Released",
+            "7F": "Pressed"
+        },
         "90 20": "Vpot switch 1",
         "90 21": "Vpot switch 2",
         "90 22": "Vpot switch 3",
@@ -133,5 +128,23 @@
         "90 27": "Vpot switch 8"
     },
     "fader_touch": {
+        "values": {
+            "00": "Released",
+            "7F": "Pressed"
+        },
+        "90 68": "fader touch 1",
+        "90 69": "fader touch 2",
+        "90 6A": "fader touch 3",
+        "90 6B": "fader touch 4",
+        "90 6C": "fader touch 5",
+        "90 6D": "fader touch 6",
+        "90 6E": "fader touch 7",
+        "90 6F": "fader touch 8",
+        "90 70": "fader touch Master"
+    },
+    "fader": {
+        "E0": "fader 1",
+        "E1": "fader 2",
+        "E2": "fader 3"
     }
 }

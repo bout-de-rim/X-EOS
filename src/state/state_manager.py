@@ -54,3 +54,6 @@ class StateManager(Subject):
             return
         self.programmer_state = "BLIND"
         self.notify_observers({"type": "goBlind"})
+
+    def movingfader(self,id,value,origin): 
+        self.notify_observers({"type": "fader", "id": id, "value": value, "origin": origin})
