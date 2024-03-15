@@ -4,6 +4,11 @@
             "00": "Released",
             "7F": "Pressed"
         },
+        "outvalues": {
+            "00": "Off",
+            "01": "Flashing",
+            "7F": "On"
+        },
         "90 00": "Rec/Rdy 1",
         "90 01": "Rec/Rdy 2",
         "90 02": "Rec/Rdy 3",
@@ -113,7 +118,7 @@
         "90 73": "RUDE SOLO LED",
         "90 74": "RELAY Click"
     },
-    "Vpot": {
+    "Vpot-switch": {
         "values": {
             "00": "Released",
             "7F": "Pressed"
@@ -126,6 +131,29 @@
         "90 25": "Vpot switch 6",
         "90 26": "Vpot switch 7",
         "90 27": "Vpot switch 8"
+    },
+    "Vpot": {
+        "B0 10": "1",
+        "B0 11": "2",
+        "B0 12": "3",
+        "B0 13": "4",
+        "B0 14": "5",
+        "B0 15": "6",
+        "B0 16": "7",
+        "B0 17": "8"
+    },
+    "Vpot-led": {
+        "B0 30": "1",
+        "B0 31": "2",
+        "B0 32": "3",
+        "B0 33": "4",
+        "B0 34": "5",
+        "B0 35": "6",
+        "B0 36": "7",
+        "B0 37": "8"
+    },
+    "Jog-wheel": {
+        "B0 3C": "Jog wheel"
     },
     "fader_touch": {
         "values": {

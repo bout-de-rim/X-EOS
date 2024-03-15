@@ -57,10 +57,16 @@ class StateManager(Subject):
 
     def movingfader(self,id,value,origin): 
         if id not in self.state['faders']:
-            self.state['faders'][id] = value
-        elif int(1000*self.state['faders'][id]) == int(1000*value):
+            self.state['faders'][id]={}
+            self.state['faders'][id]["value"] = value
+        elif int(1000*self.state['faders'][id]["value"]) == int(1000*value):
             return
-        self.state['faders'][id] = value
+        self.state['faders'][id]["value"] = value
         self.notify_observers({"type": "fader", "id": id, "value": value, "origin": origin})
 
-    
+    def namingfader(self,id,name): 
+        if id not in self.state['faders']:
+            self.state['faders'][id]={}
+            self.state['faders'][id]["name"] = name
+        self.state['faders'][id]["name"] = name
+        self.notify_observers({"type": "fadername", "id": id, "name": name})

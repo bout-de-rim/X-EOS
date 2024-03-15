@@ -29,6 +29,13 @@ class XTouchMappingEngine(Observer):
             self.logger.debug("sending goLive to X-Touch")
             self._midi_comm.send_midi_hex("90 3E 7F")
             self._midi_comm.send_midi_hex("90 3F 00")
+            
+            hex_string = ""
+            for i in range(65, 91):  # ASCII codes for A-Z
+                hex_string += hex(i)[2:] + " "  # Convert to hexadecimal and concatenate
+            self.logger.debug(f"Sending fader names to X-Touch: {hex_string}")
+            self._midi_comm.send_midi_hex(f"F0 00 00 66 14 12 38 {hex_string} F7") # ABCD...Z
+            self._midi_comm.send_midi_hex("F0 00 00 66 14 72 07 01 02 03 04 05 06 00 F7") # colors
         elif message["type"] == "goBlind":
             self.logger.debug("sending goBlind to X-Touch")
             self._midi_comm.send_midi_hex("90 3E 00")
@@ -37,6 +44,9 @@ class XTouchMappingEngine(Observer):
             #self.logger.debug(message)
             if (message["origin"]!=self): 
                 self.movefader(message["id"],message["value"])
+        elif message["type"] == "fadername":
+            self._midi_comm.send_midi_hex(f"F0 00 00 66 14 12 00 00 F7") # ABCD...Z
+            self._midi_comm.send_midi_hex("F0 00 00 66 14 72 07 01 02 03 04 05 06 00 F7") # colors
 
     def load_midi2mcu_map(self):
         """
