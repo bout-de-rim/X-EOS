@@ -58,19 +58,15 @@ class OSCClient:
                 self.logger.warning(f"Port {port} is in use, trying {port + 1}...")
                 port += 1  # Increment port and try again
 
-    def send_message(self, address, value):
+    def send_message(self, address, value=None):
         """
-        Sends an OSC message to the specified address with a given value.
+        Sends an OSC message to the specified address with an optional value.
 
         Args:
         - address: The OSC address pattern string.
-        - value: The value to send.
+        - value: The value to send. Defaults to None.
         """
-        self._client.send_message(address, value)
-
-    def send_eos_live_key(self):
-        """
-        Sends a command to press and release the 'LIVE' key on EOS.
-        """
-        self.send_message("/eos/user/1/key/LIVE", 1)
-        self.send_message("/eos/user/1/key/LIVE", 0)
+        if value is not None:
+            self._client.send_message(address, value)
+        else:
+            self._client.send_message(address)
