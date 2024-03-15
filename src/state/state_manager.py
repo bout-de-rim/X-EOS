@@ -56,4 +56,11 @@ class StateManager(Subject):
         self.notify_observers({"type": "goBlind"})
 
     def movingfader(self,id,value,origin): 
+        if id not in self.state['faders']:
+            self.state['faders'][id] = value
+        elif int(1000*self.state['faders'][id]) == int(1000*value):
+            return
+        self.state['faders'][id] = value
         self.notify_observers({"type": "fader", "id": id, "value": value, "origin": origin})
+
+    

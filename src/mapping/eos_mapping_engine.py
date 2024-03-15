@@ -27,9 +27,9 @@ class EOSMappingEngine(Observer):
                 self._osc_client.send_message(f"/eos/user/1/key/LIVE", message["value"])
             if message["key"] == "BLIND":
                 self._osc_client.send_message(f"/eos/user/1/key/BLIND", message["value"])
-        if message["type"] == "fader":
+        if message["type"] == "fader" and message["origin"] != self:
             self.init_eos_fader_bank()
-            self._osc_client.send_message(f"/eos/user/1/fader/1/1", message["value"])
+            self._osc_client.send_message(f"/eos/user/1/fader/1/{message['id']}", message["value"])
             self.logger.debug(f"Sending fader {message['id']} value {message['value']} to EOS")
             # Add logic for other keys as required
 
@@ -41,6 +41,11 @@ class EOSMappingEngine(Observer):
                 self._state_manager.goLive()
             elif args[0].startswith("BLIND: "):
                 self._state_manager.goBlind()
+        elif unused_addr.startswith("/eos/fader/"):
+            self.logger.debug(f"received fader message: {unused_addr.split('/')}={args[0]}")
+            fader_id = int(unused_addr.split("/")[4])
+            fader_value = args[0]
+            self._state_manager.movingfader(fader_id, fader_value, self)
 
     def init_eos_fader_bank(self):
         """

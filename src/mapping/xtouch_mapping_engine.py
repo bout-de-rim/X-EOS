@@ -19,6 +19,7 @@ class XTouchMappingEngine(Observer):
     def __init__(self, logger, state_manager):
         self.state_manager = state_manager
         self.midi_id_map, self.midi_value_map = self.load_midi2mcu_map()
+        self.mcu2midi = self.load_mcu2midi_map()
         self.mcu2semantic_map = self.load_mcu2semantic_map()
         self._midi_comm = None
         self.logger = logger
@@ -59,6 +60,29 @@ class XTouchMappingEngine(Observer):
                     idmapping[coding] = (name, type)
 
         return (idmapping, valuespace)
+    
+    def load_mcu2midi_map(self):
+        """
+        Load the X-Touch MCU mapping from a JSON file.
+        xtouch_midi_map.json contains the mapping MIDI -> MCU, arranged by type of control element. 
+        Ex : {"fader": {"1": "E0"}}
+        Returns:
+        - dict: {"type": {"MCU": "MIDI"}}} for example dict["fader"]["1"]=="E0".
+        """
+        file_path = os.path.join("config", "xtouch_midi_map.json")
+        filetree = read_json(file_path)
+        mapping = {}
+        for type, midi2mcu in filetree.items():
+            mapping[type] = {}
+            for midi, mcu in midi2mcu.items():
+                if isinstance(mcu, dict):
+                    # Handle the case where mcu is a dictionary
+                    for key, value in mcu.items():
+                        mapping[type][key] = value
+                else:
+                    mapping[type][mcu] = midi
+        return mapping
+
 
     def load_mcu2semantic_map(self):
         """
@@ -73,8 +97,10 @@ class XTouchMappingEngine(Observer):
         return read_json(file_path)
     
     def movefader(self, id, value): 
-        
-        self._midi_comm.send_midi_hex(self.floatTo14bits(value))
+        try:
+            self._midi_comm.send_midi_hex(self.mcu2midi["fader"][str(id)]+" "+self.floatTo14bits(value))
+        except KeyError as e:
+            self.logger.warning(f"MCU fader {id} not found in mapping ({self.mcu2midi['fader'].keys()})")
 
         
 
