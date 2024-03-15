@@ -2,5 +2,5 @@
 *.pyc
 X_EOS.egg-info
 __pycache__
-start-term.ps1
 .vscode/launch.json
+*.ps1
