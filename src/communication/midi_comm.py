@@ -40,10 +40,16 @@ class MIDIClient:
 
     def __init__(self, logger, config_file, message_callback=example_callback):
         """
+        Initializes the MIDIClient.
 
+        Parameters:
+        - logger: Logger - The logger object for logging messages.
+        - config_file: str - The path to the configuration file.
+        - message_callback: function - The callback function for handling received MIDI messages.
         """
         self.config = read_json(config_file)
-        self.device_patterns = self.config.get("MIDI", {}).get("device_pattern", ".*")
+        self.input_device_patterns = self.config.get("MIDI", {}).get("input_device_pattern", ".*")
+        self.output_device_patterns = self.config.get("MIDI", {}).get("output_device_pattern", ".*")
         self.input_port = None
         self.output_port = None
         self.message_callback = message_callback
@@ -53,24 +59,37 @@ class MIDIClient:
 
     def initialize_midi_ports(self):
         input_ports, output_ports = self.get_available_midi_ports()
+        self.logger.info(f"Available MIDI input ports: {input_ports}")
+        self.logger.info(f"Available MIDI output ports: {output_ports}")
         
-        # Parcourt toutes les expressions régulières fournies dans l'ordre de priorité
-        for pattern in self.device_patterns:
+        # Initialize input port
+        for pattern in self.input_device_patterns:
             matching_input_ports = [port for port in input_ports if re.match(pattern, port)]
-            matching_output_ports = [port for port in output_ports if re.match(pattern, port)]
-
-            # Essaye d'initialiser les ports un par un jusqu'à ce que ça fonctionne ou que tous soient épuisés
-            if matching_input_ports and matching_output_ports:
+            if matching_input_ports:
                 try:
-                    self.logger.info(f"Trying MIDI ports: {matching_input_ports[0]} (input) and {matching_output_ports[0]} (output).")
+                    self.logger.info(f"Trying MIDI input port: {matching_input_ports[0]}.")
                     self.input_port = mido.open_input(matching_input_ports[0], callback=self.message_callback)
+                    self.logger.info(f"Initialized MIDI input port: {matching_input_ports[0]}.")
+                    break
+                except IOError as e:
+                    self.logger.warning(f"Error opening MIDI input port: {e}. Trying next available port...")
+        else:
+            raise ValueError("No MIDI input ports match the given patterns or all ports are in use.")
+
+        # Initialize output port
+        for pattern in self.output_device_patterns:
+            matching_output_ports = [port for port in output_ports if re.match(pattern, port)]
+            if matching_output_ports:
+                try:
+                    self.logger.info(f"Trying MIDI output port: {matching_output_ports[0]}.")
                     self.output_port = mido.open_output(matching_output_ports[0])
-                    self.logger.info(f"Initialized MIDI ports: {matching_input_ports[0]} (input) and {matching_output_ports[0]} (output).")
-                    break  # Sort de la boucle si réussi
-                except IOError as e:  # mido peut lancer une IOError si le port ne peut pas être ouvert
-                    self.logger.warning(f"Error opening MIDI ports: {e}. Trying next available port...")
-        else:  # Ce 'else' s'exécute si la boucle 'for' se termine normalement, sans 'break'
-            raise ValueError(f"No MIDI ports match the given patterns or all ports are in use.")
+                    self.logger.info(f"Initialized MIDI output port: {matching_output_ports[0]}.")
+                    self.send_midi_hex("F0 00 00 66 14 13 00 F7")
+                    break
+                except IOError as e:
+                    self.logger.warning(f"Error opening MIDI output port: {e}. Trying next available port...")
+        else:
+            raise ValueError("No MIDI output ports match the given patterns or all ports are in use.")
 
 
     @staticmethod

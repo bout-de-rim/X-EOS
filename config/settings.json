@@ -4,6 +4,7 @@
         "port": 8000
     },
     "MIDI": {
-        "device_pattern": ["X-Touch", "RTPMIDI"]
+        "input_device_pattern": ["X-Touch", "RTPMIDI_in"],
+        "output_device_pattern": ["X-Touch", "RTPMIDI_out"]
     }
 }

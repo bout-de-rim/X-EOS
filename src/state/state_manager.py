@@ -33,7 +33,7 @@ class StateManager(Subject):
         - key_name: The name of the key pressed.
         - value: The value associated with the key press (e.g., 1 for pressed).
         """
-        print("key pressed: ", key_name, value)
+        #print("key pressed: ", key_name, value)
         self.state['keys'][key_name] = value
         self.notify_observers({"type": "key_press", "key": key_name, "value": value})
 
@@ -67,6 +67,6 @@ class StateManager(Subject):
     def namingfader(self,id,name): 
         if id not in self.state['faders']:
             self.state['faders'][id]={}
-            self.state['faders'][id]["name"] = name
         self.state['faders'][id]["name"] = name
-        self.notify_observers({"type": "fadername", "id": id, "name": name})
+        self.state['faders'][id]["color"] = "yellow"
+        self.notify_observers({"type": "fadername", "id": id, "name": name, "color": self.state['faders'][id]["color"]})

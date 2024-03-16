@@ -24,6 +24,10 @@ class XTouchMappingEngine(Observer):
         self._midi_comm = None
         self.logger = logger
 
+        self.colors = ["off", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
+        self.hexColors = {name: "{:02x}".format(i) for i, name in enumerate(self.colors)}
+        self.scribbleColors = ["00" for i in range(8)]
+
     def update(self, message):
         if message["type"] == "goLive":
             self.logger.debug("sending goLive to X-Touch")
@@ -45,8 +49,72 @@ class XTouchMappingEngine(Observer):
             if (message["origin"]!=self): 
                 self.movefader(message["id"],message["value"])
         elif message["type"] == "fadername":
-            self._midi_comm.send_midi_hex(f"F0 00 00 66 14 12 00 00 F7") # ABCD...Z
-            self._midi_comm.send_midi_hex("F0 00 00 66 14 72 07 01 02 03 04 05 06 00 F7") # colors
+            self.setScribbleText(0, message["id"], message["name"][:6])
+            self.setScribbleColor(message["id"]-1, message["color"])
+            self.logger.debug(f'{message}')
+            #self._midi_comm.send_midi_hex(f"F0 00 00 66 14 12 00 00 F7") # ABCD...Z
+            #self._midi_comm.send_midi_hex("F0 00 00 66 14 72 07 01 02 03 04 05 06 00 F7") # colors
+
+    def handle_midi_message(self, message):
+        """
+        Handles an incoming MIDI message, utilizing the mappings.
+
+        Parameters:
+        - message: str, The MIDI message received.
+        """
+        try:
+            (type, id, value) = self.map_midi2mcu(message)
+
+            if id in self.mcu2semantic_map and self.mcu2semantic_map[id] != "":
+                if type == "switch":
+                    if value == "Pressed":
+                        self.state_manager.key_pressed(self.mcu2semantic_map[id])
+                    elif value == "Released":
+                        self.state_manager.key_pressed(self.mcu2semantic_map[id], 0)
+            elif type == "fader":
+               # self.logger.debug(f"fader {id} = {self.f14bitsToFloat(value)}") 
+                self.state_manager.movingfader(id, self.f14bitsToFloat(value), self)
+            else:
+                self.logger.info(f"No mapped action for {type} '{id}' '{value}'")
+        except ValueError as e:
+            self.logger.error(e)
+            
+    
+    def movefader(self, id, value): 
+        try:
+            self._midi_comm.send_midi_hex(self.mcu2midi["fader"][str(id)]+" "+self.floatTo14bits(value))
+        except KeyError as e:
+            self.logger.warning(f"MCU fader {id} not found in mapping ({self.mcu2midi['fader'].keys()})")
+
+    def setScribbleText(self, row, col, text):
+        """
+        Set the scribble text on the X-Touch display.
+
+        Parameters:
+        - row: int. The row number (0-1).
+        - col: int. The column number (0-7).
+        - text: str. The text to display (max 7 char).
+        """
+        if row < 0 or row > 1:
+            raise ValueError("Row must be between 0 and 3")
+        if col < 0 or col > 7:
+            raise ValueError("Column must be between 0 and 7")
+        if len(text) > 7:
+            raise ValueError("Text must be 8 characters or less")
+
+        hex_string = self.ascii_to_hex(text)
+        row_col_hex = "{:02x}".format(row*8+col)
+        message = f"F0 00 00 66 14 12 {row_col_hex} {hex_string} F7"
+ #       self.logger.debug(message)
+        self._midi_comm.send_midi_hex(message)
+
+    def setScribbleColor(self, col, color): 
+        self.scribbleColors[col] = self.hexColors[color]
+        hex_string = " ".join(self.scribbleColors)
+        message = f"F0 00 00 66 14 72 {hex_string} F7"
+        self.logger.debug(message)
+        self._midi_comm.send_midi_hex(message) # colors
+
 
     def load_midi2mcu_map(self):
         """
@@ -105,14 +173,6 @@ class XTouchMappingEngine(Observer):
         """
         file_path = os.path.join("config", "xtouch_cmds.json")
         return read_json(file_path)
-    
-    def movefader(self, id, value): 
-        try:
-            self._midi_comm.send_midi_hex(self.mcu2midi["fader"][str(id)]+" "+self.floatTo14bits(value))
-        except KeyError as e:
-            self.logger.warning(f"MCU fader {id} not found in mapping ({self.mcu2midi['fader'].keys()})")
-
-        
 
     def map_midi2mcu(self, message):
         """
@@ -159,31 +219,6 @@ class XTouchMappingEngine(Observer):
         
         # Return the identified type, id, and value as a tuple
         return (type, id, value)
-
-    def handle_midi_message(self, message):
-        """
-        Handles an incoming MIDI message, utilizing the mappings.
-
-        Parameters:
-        - message: str, The MIDI message received.
-        """
-        try:
-            (type, id, value) = self.map_midi2mcu(message)
-
-            if id in self.mcu2semantic_map and self.mcu2semantic_map[id] != "":
-                if type == "switch":
-                    if value == "Pressed":
-                        self.state_manager.key_pressed(self.mcu2semantic_map[id])
-                    elif value == "Released":
-                        self.state_manager.key_pressed(self.mcu2semantic_map[id], 0)
-                self.logger.debug("MCU with semantic but no implementation ") 
-            elif type == "fader":
-               # self.logger.debug(f"fader {id} = {self.f14bitsToFloat(value)}") 
-                self.state_manager.movingfader(id, self.f14bitsToFloat(value), self)
-            else:
-                self.logger.info(f"No mapped action for {type} '{id}' '{value}'")
-        except ValueError as e:
-            self.logger.error(e)
 
     def floatTo14bits(self, value):
         """
@@ -233,3 +268,11 @@ class XTouchMappingEngine(Observer):
 
         # Convert the 14-bit integer value back to a float
         return int_value / 16380.0  # 16383 = 2^14 - 1
+    
+
+    def ascii_to_hex(self,input_string):
+        hex_string = ""
+        for char in input_string:
+            ascii_code = ord(char)  # Get ASCII code of character
+            hex_string += hex(ascii_code)[2:] + " "  # Convert ASCII code to hexadecimal and concatenate
+        return hex_string.strip()  # Remove trailing space

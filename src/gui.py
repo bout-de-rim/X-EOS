@@ -21,7 +21,6 @@ def run_gui(logger):
     root.title("X-EOS GUI")
     log_area = scrolledtext.ScrolledText(root, width=40, height=10)
     log_area.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
-    root.mainloop()
 
     # Création et ajout du GUIHandler au logger
     gui_handler = GUIHandler(log_area)
@@ -32,9 +31,5 @@ def run_gui(logger):
         gui_handler.setFormatter(formatter)
     logger.addHandler(gui_handler)
 
-
-if __name__ == "__main__":
-    logger = logging.getLogger('X-EOS')
-    logger.setLevel(logging.DEBUG)
-    logger.info(f"Started")
-    run_gui(logger)
+    
+    root.mainloop()
