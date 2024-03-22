@@ -17,7 +17,7 @@ class EOSMappingEngine(Observer):
         self._state_manager = state_manager
         self.logger = logger
 
-        self.eos_fader_bank = EOSFaderBank(osc_client, 10)
+        self.eos_fader_bank = EOSFaderBank(osc_client, 10, state_manager)
 
 
 
@@ -25,9 +25,9 @@ class EOSMappingEngine(Observer):
         if message["type"] == "key_press":
             if message["key"].startswith("EOS_"):
                 self._osc_client.send_message(f"/eos/user/1/key/{message['key'][4:]}", message["value"])
-            elif message["key"] == "FADER_PAGE_NEXT":
+            elif message["key"] == "FADER_PAGE_NEXT" and message["value"] == 1:
                 self.eos_fader_bank.pageNext()
-            elif message["key"] == "FADER_PAGE_PREV":
+            elif message["key"] == "FADER_PAGE_PREV" and message["value"] == 1:
                 self.eos_fader_bank.pagePrev()
         elif message["type"] == "fader" and message["origin"] != self:
             self.eos_fader_bank.init_on_eos()
@@ -42,25 +42,30 @@ class EOSMappingEngine(Observer):
             elif args[0].startswith("BLIND: "):
                 self._state_manager.goBlind()
         elif unused_addr.startswith("/eos/fader/"):
-            self.logger.debug(f"received fader message: {unused_addr.split('/')}={args[0]}")
+            #self.logger.debug(f"received fader message: {unused_addr.split('/')}={args[0]}")
             fader_id = int(unused_addr.split("/")[4])
             fader_value = args[0]
             self._state_manager.movingfader(fader_id, fader_value, self)
         elif unused_addr.startswith("/eos/out/fader/"):
             cmd=unused_addr.split('/')
             if len(cmd) >=7 and cmd[6]=="name": 
-                self.logger.debug(f"received fader name: {cmd[4]}={args[0]}")
-                self._state_manager.namingfader(int(cmd[4]),args[0])
+                self.logger.debug(f"received fader name: {cmd}={args[0]}")
+                self._state_manager.namingfader(int(cmd[5]),args[0])
                 self.eos_fader_bank.faders[int(cmd[4])-1].name = args[0]
                 #self._state_manager.notify_observers({"type": "eosfadername", "id": int(cmd[4]), "name": args[0]})
-                self._state_manager.namingfader(int(cmd[4]),args[0])
+                self._state_manager.namingfader(int(cmd[5]),args[0])
             elif cmd[4]=="range":
                 pass
-            elif cmd[4]==self.eos_fader_bank.eos_osc_id and len(cmd) == 5:
+            elif cmd[4]==str(self.eos_fader_bank.eos_osc_id) and len(cmd) == 5:
                 # String argument with descriptive text for the OSC fader bank at <index>
-                pass
+                self._state_manager.faderPageChanged(int(args[0]))
             else:
-                self.logger.info(f"received unknown fader message: {cmd}={args}")
+                self.logger.info(f"received unknown fader message ({len(cmd)}): {cmd}={args}")
+        elif unused_addr.startswith("/eos/out/active/cue/text"):
+            self.logger.debug(f"received active cue: {args[0]}")
+            self.logger.debug(f"received remaining time: {args[0].split(' ')[-2]}")
+            text_arr = args[0].split(' ')
+            self._state_manager.cue_playing(text_arr[0], ' '.join(text_arr[1:-2]), text_arr[-2])
         
 class EOSFader:
     def __init__(self, osc_client, id, name):
@@ -89,22 +94,23 @@ class EOSFader:
         return f"Fader {self.id} ({self.name})"
     
 class EOSFaderBank:
-    def __init__(self, osc_client, width):
+    def __init__(self, osc_client, width, state_manager):
         self._osc_client = osc_client
         self.width = width
         self.active_page = 0
         self.eos_osc_id = 1
         self.faders = [EOSFader(osc_client, i, f"Fader {i}") for i in range(1, width + 1)]
         self.initialized = False
+        self.state_manager = state_manager
 
     def init_on_eos(self):
         if self.initialized:
             return
-        self.eos_osc_id = self._osc_client.send_message(f"/eos/user/1/fader/{self.eos_osc_id}/config/{self.width}", 1)
+        self._osc_client.send_message(f"/eos/user/1/fader/{self.eos_osc_id}/config/{self.width}", 1)
         self.initialized = True
 
     def pageNext(self):
-        self.active_page = min(self.active_page + 1, 10)
+        self.active_page = min(self.active_page + 1, 8)
         self.setPage(self.active_page)
 
     def pagePrev(self): 
@@ -113,8 +119,11 @@ class EOSFaderBank:
 
     def setPage(self, page):
         #model: /eos/user/1/fader/3/config/2/10
+        if self.eos_osc_id is None: 
+            raise AssertionError("EOS OSC ID is not set")
         self._osc_client.send_message(f"/eos/user/1/fader/{self.eos_osc_id}/config/{self.active_page}/{self.width}", 1)
-        print(f"Fader page {self.active_page}")
+        #self.state_manager.faderPageChanged(page)
+        #self.state_manager.logger.debug(f"Fader page {self.active_page}")
 
     def __str__(self):
         return f"EOS OSC Fader Bank {self.eos_osc_id} (Current page {self.active_page}): {self.faders}"

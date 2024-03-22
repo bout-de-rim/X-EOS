@@ -10,7 +10,7 @@ class StateManager(Subject):
     Extends the Subject class to provide observer pattern functionality.
     """
 
-    def __init__(self):
+    def __init__(self, logger=None):
         """
         Initializes the StateManager with default or initial state values.
         """
@@ -23,6 +23,10 @@ class StateManager(Subject):
         }
         # the EOS programmer state LIVE, BLIND, STAGINGMODE, unknown
         self.programmer_state = "unknown"
+        
+        self.eos = None
+        self.xtouch = None
+        self.logger = logger
 
 
     def key_pressed(self, key_name, value=1):
@@ -65,8 +69,32 @@ class StateManager(Subject):
         self.notify_observers({"type": "fader", "id": id, "value": value, "origin": origin})
 
     def namingfader(self,id,name): 
-        if id not in self.state['faders']:
-            self.state['faders'][id]={}
-        self.state['faders'][id]["name"] = name
-        self.state['faders'][id]["color"] = "yellow"
-        self.notify_observers({"type": "fadername", "id": id, "name": name, "color": self.state['faders'][id]["color"]})
+        #if id not in self.state['faders']:
+        #    self.state['faders'][id]={}
+        #self.state['faders'][id]["name"] = name
+        #self.state['faders'][id]["color"] = "yellow"
+
+        # fader out of range of the X-Touch
+        if id not in range(1,9):
+            return
+        
+        split_name = name.split(" ")
+        target_type = split_name[0]
+        target_id = split_name[1] if len(split_name) > 1 else ""
+        target_name = " ".join(split_name[2:]) if len(split_name) > 2 else ""       
+
+        # eos fader targets: CL, S, IP, FP, CP, BP, PR, GM, Man Time, Gobal FX, unmapped
+        self.xtouch.setScribbleText(0, id-1, f"{target_type} {target_id}"[:7])
+        self.xtouch.setScribbleText(1, id-1, target_name[:7])
+        # colors: ["off", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
+        faderColor = {"CL": "green", "S": "yellow", "IP":"yellow", "FP":"green", "CP":"white", "BP":"blue", "Pr":"cyan", "GM":"red", "Man":"green", "Global":"magenta", "":"off"}
+        
+        self.xtouch.setScribbleColor(id-1, faderColor[target_type] if target_type in faderColor else "white")
+
+    def faderPageChanged(self,page):
+        #self.logger.debug(f"Page changed to {page}")
+        for i in range(1,9): 
+           self.xtouch.setButtonLed(f"Rec/Rdy {i}", "On" if i==page else "Off")
+
+    def cue_playing(self, cueId, cueText, cueTime): 
+        self.xtouch.set7segment(cueId+" "+cueTime)

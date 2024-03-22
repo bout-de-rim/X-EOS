@@ -20,40 +20,23 @@ class XTouchMappingEngine(Observer):
         self.state_manager = state_manager
         self.midi_id_map, self.midi_value_map = self.load_midi2mcu_map()
         self.mcu2midi = self.load_mcu2midi_map()
+        print (self.mcu2midi)
         self.mcu2semantic_map = self.load_mcu2semantic_map()
         self._midi_comm = None
         self.logger = logger
+
+        self.hdr = "F0 00 00 66 14"
+        self.ftr = "F7"
 
         self.colors = ["off", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
         self.hexColors = {name: "{:02x}".format(i) for i, name in enumerate(self.colors)}
         self.scribbleColors = ["00" for i in range(8)]
 
     def update(self, message):
-        if message["type"] == "goLive":
-            self.logger.debug("sending goLive to X-Touch")
-            self._midi_comm.send_midi_hex("90 3E 7F")
-            self._midi_comm.send_midi_hex("90 3F 00")
-            
-            hex_string = ""
-            for i in range(65, 91):  # ASCII codes for A-Z
-                hex_string += hex(i)[2:] + " "  # Convert to hexadecimal and concatenate
-            self.logger.debug(f"Sending fader names to X-Touch: {hex_string}")
-            self._midi_comm.send_midi_hex(f"F0 00 00 66 14 12 38 {hex_string} F7") # ABCD...Z
-            self._midi_comm.send_midi_hex("F0 00 00 66 14 72 07 01 02 03 04 05 06 00 F7") # colors
-        elif message["type"] == "goBlind":
-            self.logger.debug("sending goBlind to X-Touch")
-            self._midi_comm.send_midi_hex("90 3E 00")
-            self._midi_comm.send_midi_hex("90 3F 7F")
-        elif message["type"] == "fader":
+        if message["type"] == "fader":
             #self.logger.debug(message)
             if (message["origin"]!=self): 
                 self.movefader(message["id"],message["value"])
-        elif message["type"] == "fadername":
-            self.setScribbleText(0, message["id"], message["name"][:6])
-            self.setScribbleColor(message["id"]-1, message["color"])
-            self.logger.debug(f'{message}')
-            #self._midi_comm.send_midi_hex(f"F0 00 00 66 14 12 00 00 F7") # ABCD...Z
-            #self._midi_comm.send_midi_hex("F0 00 00 66 14 72 07 01 02 03 04 05 06 00 F7") # colors
 
     def handle_midi_message(self, message):
         """
@@ -84,7 +67,8 @@ class XTouchMappingEngine(Observer):
         try:
             self._midi_comm.send_midi_hex(self.mcu2midi["fader"][str(id)]+" "+self.floatTo14bits(value))
         except KeyError as e:
-            self.logger.warning(f"MCU fader {id} not found in mapping ({self.mcu2midi['fader'].keys()})")
+            #self.logger.warning(f"MCU fader {id} not found in mapping ({self.mcu2midi['fader'].keys()})")
+            pass
 
     def setScribbleText(self, row, col, text):
         """
@@ -102,18 +86,55 @@ class XTouchMappingEngine(Observer):
         if len(text) > 7:
             raise ValueError("Text must be 8 characters or less")
 
-        hex_string = self.ascii_to_hex(text)
-        row_col_hex = "{:02x}".format(row*8+col)
-        message = f"F0 00 00 66 14 12 {row_col_hex} {hex_string} F7"
- #       self.logger.debug(message)
+        padded_text = text.ljust(8)
+        hex_string = self.ascii_to_hex(padded_text)
+        #self.logger.debug(f"setScribbleText: {row} {col} '{padded_text}' {hex_string}")
+        row_col_hex = "{:02x}".format(row*37+col*7)
+        message = f"{self.hdr} 12 {row_col_hex} {hex_string} {self.ftr}"
+        #self.logger.debug("setScribbleText: "+message)
         self._midi_comm.send_midi_hex(message)
+        pass
 
     def setScribbleColor(self, col, color): 
         self.scribbleColors[col] = self.hexColors[color]
         hex_string = " ".join(self.scribbleColors)
-        message = f"F0 00 00 66 14 72 {hex_string} F7"
-        self.logger.debug(message)
+        message = f"{self.hdr} 72 {hex_string} {self.ftr}"
+        #self.logger.debug("setScribbleColor: "+message)
         self._midi_comm.send_midi_hex(message) # colors
+        self.set7segment("essai 012345679")
+
+    def set7segment(self, text): 
+        mcu_text = ""
+
+        # Convert the text to MCU 7-seg format
+        for c in text[:12].upper():
+            mcu_text += chr(ord(c) - 0x40) if 0x40 <= ord(c) <= 0x5A else c
+
+        hex_string = self.ascii_to_hex(mcu_text)
+
+        for i in range(13):
+            col_hex = "{:01x}".format(12-i)
+            chr_hex = "{:02x}".format(ord(mcu_text[i+len(mcu_text)-13])) if 12-i < len(mcu_text) else "20"
+            message = f"B0 4{col_hex} {chr_hex}"
+            self._midi_comm.send_midi_hex(message)
+
+    def setButtonLed(self, id, state="On"):
+        """
+        Set the state of a button LED on the X-Touch.
+
+        Parameters:
+        - id: string. The button identifier as found in "xtouch_midi_map.json".
+        - state: str. The state of the LED ("on", "off" or "flashing", as found in json->switch->outvalues).
+        """
+        if id not in self.mcu2midi["switch"]:
+            self.logger.warning(f"Button {id} not found in mapping")
+            return
+
+        state_hex = self.mcu2midi["switch"]["outvalues"][state]
+        id_hex = self.mcu2midi["switch"][id]
+        message = f"{id_hex} {state_hex}"
+        #self.logger.debug(f"setButtonLed: {message}")
+        self._midi_comm.send_midi_hex(message)
 
 
     def load_midi2mcu_map(self):
@@ -134,6 +155,8 @@ class XTouchMappingEngine(Observer):
             for coding, name in codname.items():
                 if coding == "values": 
                     valuespace[type] = name
+                elif coding == "outvalues": 
+                    valuespace["{type}_out"] = name
                 else:
                     idmapping[coding] = (name, type)
 
@@ -155,8 +178,9 @@ class XTouchMappingEngine(Observer):
             for midi, mcu in midi2mcu.items():
                 if isinstance(mcu, dict):
                     # Handle the case where mcu is a dictionary
+                    mapping[type][midi] = {}
                     for key, value in mcu.items():
-                        mapping[type][key] = value
+                        mapping[type][midi][value] = key
                 else:
                     mapping[type][mcu] = midi
         return mapping
@@ -276,3 +300,4 @@ class XTouchMappingEngine(Observer):
             ascii_code = ord(char)  # Get ASCII code of character
             hex_string += hex(ascii_code)[2:] + " "  # Convert ASCII code to hexadecimal and concatenate
         return hex_string.strip()  # Remove trailing space
+    

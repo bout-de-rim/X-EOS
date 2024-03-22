@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     try:
         # Initialization
-        state_manager = StateManager()
+        state_manager = StateManager(logger)
         osc = OSCClient(logger)
         xtouch_mapping = XTouchMappingEngine(logger, state_manager)
         midi = MIDIClient(logger, "config/settings.json", xtouch_mapping.handle_midi_message)
@@ -50,6 +50,8 @@ if __name__ == "__main__":
         eos_mapping = EOSMappingEngine(logger, osc_client=osc, state_manager=state_manager)
         state_manager.add_observer(eos_mapping)
         state_manager.add_observer(xtouch_mapping)
+        state_manager.eos = eos_mapping
+        state_manager.xtouch = xtouch_mapping
         logger.info(f"State Manager initialized with {len(state_manager._observers)} observers.")
        # osc.start_server("/eos", eos_mapping.eos_osc_handler)
         osc_thread = threading.Thread(target=lambda: start_osc_server(osc), daemon=True)
