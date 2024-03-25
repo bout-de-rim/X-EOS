@@ -6,6 +6,7 @@ import os
 import time
 from utils.json_handler import read_json
 from observer import Observer
+from mapping.xtouch_jogwheel import JogWheelHandler
 
 class XTouchMappingEngine(Observer):
     """
@@ -24,6 +25,8 @@ class XTouchMappingEngine(Observer):
         self.mcu2semantic_map = self.load_mcu2semantic_map()
         self._midi_comm = None
         self.logger = logger
+
+        self.jogWheelHandler = JogWheelHandler()
 
         self.hdr = "F0 00 00 66 14"
         self.ftr = "F7"
@@ -61,9 +64,9 @@ class XTouchMappingEngine(Observer):
         """
         try:
             (type, id, value) = self.map_midi2mcu(message)
-
-            if id in self.mcu2semantic_map and self.mcu2semantic_map[id] != "":
-                if type == "switch":
+            # print(f"MCU: {type} {id} {value}")
+            if type == "switch":
+                if id in self.mcu2semantic_map and self.mcu2semantic_map[id] != "":
                     if value == "Pressed":
                         self.state_manager.key_pressed(self.mcu2semantic_map[id])
                     elif value == "Released":
@@ -83,6 +86,9 @@ class XTouchMappingEngine(Observer):
                     self.fader_touched[id] = False
                     #send the last value to the controler to avoid "go back" mechanism
                     self.moveFader(id, self.fader_values[id])
+            elif type == "Jog-wheel":
+                jog_value = self.jogWheelHandler.handle(value)
+                self.state_manager.jogWheel(jog_value)
             else:
                 self.logger.info(f"No mapped action for {type} '{id}' '{value}'")
         except ValueError as e:

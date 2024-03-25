@@ -107,5 +107,8 @@ class StateManager(Subject):
     def setFaderPage(self,page):
         self.eos.eos_fader_bank.setPage(page)
 
+    def jogWheel(self, value): 
+        self.eos.intens_wheel(value)
+
     def cue_playing(self, cueId, cueText, cueTime): 
         self.xtouch.set7segment(cueId+" "+cueTime)

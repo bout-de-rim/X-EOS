@@ -115,5 +115,6 @@
     "SMPTE LED": "",
     "Beats LED": "",
     "RUDE SOLO LED": "",
-    "RELAY Click": ""
+    "RELAY Click": "", 
+    "Jog wheel": "WHEEL_INTENS"
 }

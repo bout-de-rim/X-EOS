@@ -82,6 +82,9 @@ class EOSMappingEngine(Observer):
             self.logger.debug(f"received remaining time: {args[0].split(' ')[-2]}")
             text_arr = args[0].split(' ')
             self._state_manager.cue_playing(text_arr[0], ' '.join(text_arr[1:-2]), text_arr[-2])
+
+    def intens_wheel(self, value):
+        self._osc_client.send_message("/eos/user/1/wheel/intens", value)
         
 class EOSFader:
     def __init__(self, osc_client, bank, id, name):
