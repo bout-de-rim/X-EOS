@@ -60,11 +60,13 @@ class StateManager(Subject):
         self.notify_observers({"type": "goBlind"})
 
     def eosMovesFader(self, fader):
+        # self.logger.debug(f"EOS moves fader {fader.id} to {fader.value}")
         if not fader.fired:
             self.xtouch.moveFader(fader.id, fader.value)
 
     def xtouchMovesFader(self, id, value):
-            self.eos.eos_fader_bank.get(id).setValue(value)
+        # self.logger.debug(f"X-Touch moves fader {id} to {value}")
+        self.eos.eos_fader_bank.get(id).setValue(value)
 
     def namingfader(self,id,name): 
         #if id not in self.state['faders']:

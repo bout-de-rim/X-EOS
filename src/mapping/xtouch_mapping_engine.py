@@ -33,6 +33,7 @@ class XTouchMappingEngine(Observer):
         self.scribbleColors = ["00" for i in range(8)]
 
         self.fader_touched = {}
+        self.fader_values = {}
         self.last_motor_movement_time = {}
 
     def init_xtouch(self):
@@ -69,7 +70,8 @@ class XTouchMappingEngine(Observer):
                         self.state_manager.key_pressed(self.mcu2semantic_map[id], 0)
             elif type == "fader":
                 if id in self.fader_touched and self.fader_touched[id]:
-                    self.state_manager.xtouchMovesFader(int(id), self.f14bitsToFloat(value))
+                    self.fader_values[id] = self.f14bitsToFloat(value)
+                    self.state_manager.xtouchMovesFader(int(id), self.fader_values[id])
                 else:
                     if id not in self.last_motor_movement_time or time.time() - self.last_motor_movement_time[id] > 0.5:
                         self.logger.debug(f"last_motor_movement_time: {id} {self.last_motor_movement_time[id]} current time: {time.time()} delta: {time.time() - self.last_motor_movement_time[id]}")
@@ -79,6 +81,8 @@ class XTouchMappingEngine(Observer):
                     self.fader_touched[id] = True
                 elif value == "Released":
                     self.fader_touched[id] = False
+                    #send the last value to the controler to avoid "go back" mechanism
+                    self.moveFader(id, self.fader_values[id])
             else:
                 self.logger.info(f"No mapped action for {type} '{id}' '{value}'")
         except ValueError as e:
