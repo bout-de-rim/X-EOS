@@ -3,6 +3,7 @@ Manages mapping of X-Touch data to internal states.
 """
 
 import os
+import time
 from utils.json_handler import read_json
 from observer import Observer
 
@@ -20,7 +21,6 @@ class XTouchMappingEngine(Observer):
         self.state_manager = state_manager
         self.midi_id_map, self.midi_value_map = self.load_midi2mcu_map()
         self.mcu2midi = self.load_mcu2midi_map()
-        print (self.mcu2midi)
         self.mcu2semantic_map = self.load_mcu2semantic_map()
         self._midi_comm = None
         self.logger = logger
@@ -31,6 +31,19 @@ class XTouchMappingEngine(Observer):
         self.colors = ["off", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
         self.hexColors = {name: "{:02x}".format(i) for i, name in enumerate(self.colors)}
         self.scribbleColors = ["00" for i in range(8)]
+
+        self.fader_touched = {}
+        self.last_motor_movement_time = {}
+
+    def init_xtouch(self):
+        """
+        Initialize the X-Touch control surface.
+        """
+        self.logger.info("Initializing X-Touch control surface")
+        self.send_sysex("63") #Reset
+        self.send_sysex("13 00") #Firmware version request
+        self.set7segment("X-EOS")
+        self.logger.info("X-Touch initialized")
 
     def update(self, message):
         if message["type"] == "fader":
@@ -55,17 +68,28 @@ class XTouchMappingEngine(Observer):
                     elif value == "Released":
                         self.state_manager.key_pressed(self.mcu2semantic_map[id], 0)
             elif type == "fader":
-               # self.logger.debug(f"fader {id} = {self.f14bitsToFloat(value)}") 
-                self.state_manager.movingfader(id, self.f14bitsToFloat(value), self)
+                if id in self.fader_touched and self.fader_touched[id]:
+                    self.state_manager.movingfader(id, self.f14bitsToFloat(value), self)
+                else:
+                    if id not in self.last_motor_movement_time or time.time() - self.last_motor_movement_time[id] > 0.5:
+                        self.logger.debug(f"last_motor_movement_time: {id} {self.last_motor_movement_time[id]} current time: {time.time()} delta: {time.time() - self.last_motor_movement_time[id]}")
+                        self.logger.warning(f"Fader {id} moved without being touched. Ignoring.")
+            elif type == "fader_touch": 
+                if value == "Pressed":
+                    self.fader_touched[id] = True
+                elif value == "Released":
+                    self.fader_touched[id] = False
             else:
                 self.logger.info(f"No mapped action for {type} '{id}' '{value}'")
         except ValueError as e:
             self.logger.error(e)
             
     
+
     def movefader(self, id, value): 
         try:
-            self._midi_comm.send_midi_hex(self.mcu2midi["fader"][str(id)]+" "+self.floatTo14bits(value))
+            self.send(self.mcu2midi["fader"][str(id)]+" "+self.floatTo14bits(value))
+            self.last_motor_movement_time[id] =  time.time()
         except KeyError as e:
             #self.logger.warning(f"MCU fader {id} not found in mapping ({self.mcu2midi['fader'].keys()})")
             pass
@@ -90,18 +114,17 @@ class XTouchMappingEngine(Observer):
         hex_string = self.ascii_to_hex(padded_text)
         #self.logger.debug(f"setScribbleText: {row} {col} '{padded_text}' {hex_string}")
         row_col_hex = "{:02x}".format(row*37+col*7)
-        message = f"{self.hdr} 12 {row_col_hex} {hex_string} {self.ftr}"
+        message = f"12 {row_col_hex} {hex_string}"
         #self.logger.debug("setScribbleText: "+message)
-        self._midi_comm.send_midi_hex(message)
+        self.send_sysex(message)
         pass
 
     def setScribbleColor(self, col, color): 
         self.scribbleColors[col] = self.hexColors[color]
         hex_string = " ".join(self.scribbleColors)
-        message = f"{self.hdr} 72 {hex_string} {self.ftr}"
+        message = f"72 {hex_string}"
         #self.logger.debug("setScribbleColor: "+message)
-        self._midi_comm.send_midi_hex(message) # colors
-        self.set7segment("essai 012345679")
+        self.send_sysex(message) # colors
 
     def set7segment(self, text): 
         mcu_text = ""
@@ -116,7 +139,7 @@ class XTouchMappingEngine(Observer):
             col_hex = "{:01x}".format(12-i)
             chr_hex = "{:02x}".format(ord(mcu_text[i+len(mcu_text)-13])) if 12-i < len(mcu_text) else "20"
             message = f"B0 4{col_hex} {chr_hex}"
-            self._midi_comm.send_midi_hex(message)
+            self.send(message)
 
     def setButtonLed(self, id, state="On"):
         """
@@ -134,7 +157,7 @@ class XTouchMappingEngine(Observer):
         id_hex = self.mcu2midi["switch"][id]
         message = f"{id_hex} {state_hex}"
         #self.logger.debug(f"setButtonLed: {message}")
-        self._midi_comm.send_midi_hex(message)
+        self.send(message)
 
 
     def load_midi2mcu_map(self):
@@ -301,3 +324,10 @@ class XTouchMappingEngine(Observer):
             hex_string += hex(ascii_code)[2:] + " "  # Convert ASCII code to hexadecimal and concatenate
         return hex_string.strip()  # Remove trailing space
     
+    def send(self, message):
+        self._midi_comm.send_midi_hex(message)
+        pass
+        
+    def send_sysex(self, message):
+        self.send(f"{self.hdr} {message} {self.ftr}")
+        pass

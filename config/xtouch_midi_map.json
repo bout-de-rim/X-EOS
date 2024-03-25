@@ -160,15 +160,15 @@
             "00": "Released",
             "7F": "Pressed"
         },
-        "90 68": "fader touch 1",
-        "90 69": "fader touch 2",
-        "90 6A": "fader touch 3",
-        "90 6B": "fader touch 4",
-        "90 6C": "fader touch 5",
-        "90 6D": "fader touch 6",
-        "90 6E": "fader touch 7",
-        "90 6F": "fader touch 8",
-        "90 70": "fader touch Master"
+        "90 68": "1",
+        "90 69": "2", 
+        "90 6A": "3",
+        "90 6B": "4",
+        "90 6C": "5",
+        "90 6D": "6",
+        "90 6E": "7",
+        "90 6F": "8",
+        "90 70": "Master"
     },
     "fader": {
         "E0": "1",

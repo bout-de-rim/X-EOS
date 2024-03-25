@@ -19,16 +19,16 @@ class EOSMappingEngine(Observer):
 
         self.eos_fader_bank = EOSFaderBank(osc_client, 10, state_manager)
 
-
-
     def update(self, message):
         if message["type"] == "key_press":
             if message["key"].startswith("EOS_"):
                 self._osc_client.send_message(f"/eos/user/1/key/{message['key'][4:]}", message["value"])
-            elif message["key"] == "FADER_PAGE_NEXT" and message["value"] == 1:
+            elif message["key"] == "FADER_PAGE_NEXT" and message["value"] == 0:
                 self.eos_fader_bank.pageNext()
-            elif message["key"] == "FADER_PAGE_PREV" and message["value"] == 1:
+            elif message["key"] == "FADER_PAGE_PREV" and message["value"] == 0:
                 self.eos_fader_bank.pagePrev()
+            elif message["key"].startswith("FADER_PAGE_") and message["value"] == 0:
+                self.eos_fader_bank.setPage(int(message["key"][-1:]))
         elif message["type"] == "fader" and message["origin"] != self:
             self.eos_fader_bank.init_on_eos()
             self.eos_fader_bank.faders[int(message["id"])-1].setValue(message["value"])
@@ -49,7 +49,7 @@ class EOSMappingEngine(Observer):
         elif unused_addr.startswith("/eos/out/fader/"):
             cmd=unused_addr.split('/')
             if len(cmd) >=7 and cmd[6]=="name": 
-                self.logger.debug(f"received fader name: {cmd}={args[0]}")
+                #self.logger.debug(f"received fader name: {cmd}={args[0]}")
                 self._state_manager.namingfader(int(cmd[5]),args[0])
                 self.eos_fader_bank.faders[int(cmd[4])-1].name = args[0]
                 #self._state_manager.notify_observers({"type": "eosfadername", "id": int(cmd[4]), "name": args[0]})
@@ -110,20 +110,19 @@ class EOSFaderBank:
         self.initialized = True
 
     def pageNext(self):
-        self.active_page = min(self.active_page + 1, 8)
-        self.setPage(self.active_page)
+        self.setPage(min(self.active_page + 1, 8))
 
     def pagePrev(self): 
-        self.active_page = max(self.active_page - 1, 1)
-        self.setPage(self.active_page)
+        self.setPage(max(self.active_page - 1, 1))
 
     def setPage(self, page):
         #model: /eos/user/1/fader/3/config/2/10
         if self.eos_osc_id is None: 
             raise AssertionError("EOS OSC ID is not set")
+        self.active_page = page
         self._osc_client.send_message(f"/eos/user/1/fader/{self.eos_osc_id}/config/{self.active_page}/{self.width}", 1)
         #self.state_manager.faderPageChanged(page)
-        #self.state_manager.logger.debug(f"Fader page {self.active_page}")
+        self.state_manager.logger.debug(f"Fader page {self.active_page}")
 
     def __str__(self):
         return f"EOS OSC Fader Bank {self.eos_osc_id} (Current page {self.active_page}): {self.faders}"

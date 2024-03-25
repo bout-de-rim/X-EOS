@@ -96,5 +96,8 @@ class StateManager(Subject):
         for i in range(1,9): 
            self.xtouch.setButtonLed(f"Rec/Rdy {i}", "On" if i==page else "Off")
 
+    def setFaderPage(self,page):
+        self.eos.eos_fader_bank.setPage(page)
+
     def cue_playing(self, cueId, cueText, cueTime): 
         self.xtouch.set7segment(cueId+" "+cueTime)

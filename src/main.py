@@ -37,7 +37,7 @@ if __name__ == "__main__":
     console_handler.setFormatter(formatter)
 
     # Ajouter le handler de console par défaut
-    logger.addHandler(console_handler)
+#    logger.addHandler(console_handler)
 
 
     try:
@@ -47,6 +47,7 @@ if __name__ == "__main__":
         xtouch_mapping = XTouchMappingEngine(logger, state_manager)
         midi = MIDIClient(logger, "config/settings.json", xtouch_mapping.handle_midi_message)
         xtouch_mapping._midi_comm = midi
+        xtouch_mapping.init_xtouch()
         eos_mapping = EOSMappingEngine(logger, osc_client=osc, state_manager=state_manager)
         state_manager.add_observer(eos_mapping)
         state_manager.add_observer(xtouch_mapping)
@@ -56,6 +57,8 @@ if __name__ == "__main__":
        # osc.start_server("/eos", eos_mapping.eos_osc_handler)
         osc_thread = threading.Thread(target=lambda: start_osc_server(osc), daemon=True)
         osc_thread.start()
+        time.sleep(1)
+        state_manager.setFaderPage(1)
 
         # Simulating a key press
         #state_manager.key_pressed("LIVE")

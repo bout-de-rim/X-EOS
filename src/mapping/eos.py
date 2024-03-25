@@ -20,6 +20,13 @@ class EOS:
 
     def eos_osc_handler(self, unused_addr, *arg):
         self.logger.debug(f"OSC message: {unused_addr}={arg}")
+        segmented = unused_addr.split("/")
+        if segmented[2] == "fader": 
+            self.faderBank.faders[int(segmented[3])].setValue(arg[0])
+        elif segmented[2] == "out":
+            pass
+        else:
+            self.logger.warning(f"Unknown OSC message from EOS: {unused_addr}={arg}")
 
     def send(self, url, value):
         self._osc_client.send_message(f"/eos/user/{self.user}/{url}", value)
