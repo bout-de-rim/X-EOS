@@ -69,7 +69,7 @@ class XTouchMappingEngine(Observer):
                         self.state_manager.key_pressed(self.mcu2semantic_map[id], 0)
             elif type == "fader":
                 if id in self.fader_touched and self.fader_touched[id]:
-                    self.state_manager.movingfader(id, self.f14bitsToFloat(value), self)
+                    self.state_manager.xtouchMovesFader(int(id), self.f14bitsToFloat(value))
                 else:
                     if id not in self.last_motor_movement_time or time.time() - self.last_motor_movement_time[id] > 0.5:
                         self.logger.debug(f"last_motor_movement_time: {id} {self.last_motor_movement_time[id]} current time: {time.time()} delta: {time.time() - self.last_motor_movement_time[id]}")
@@ -86,7 +86,7 @@ class XTouchMappingEngine(Observer):
             
     
 
-    def movefader(self, id, value): 
+    def moveFader(self, id, value): 
         try:
             self.send(self.mcu2midi["fader"][str(id)]+" "+self.floatTo14bits(value))
             self.last_motor_movement_time[id] =  time.time()
@@ -317,11 +317,12 @@ class XTouchMappingEngine(Observer):
         return int_value / 16380.0  # 16383 = 2^14 - 1
     
 
-    def ascii_to_hex(self,input_string):
+    def ascii_to_hex(self, input_string):
         hex_string = ""
         for char in input_string:
-            ascii_code = ord(char)  # Get ASCII code of character
-            hex_string += hex(ascii_code)[2:] + " "  # Convert ASCII code to hexadecimal and concatenate
+            if char not in ['\n', '\r', '\t']:  # Check if character is not in the list of characters to remove
+                ascii_code = ord(char)  # Get ASCII code of character
+                hex_string += hex(ascii_code)[2:] + " "  # Convert ASCII code to hexadecimal and concatenate
         return hex_string.strip()  # Remove trailing space
     
     def send(self, message):

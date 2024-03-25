@@ -22,16 +22,29 @@ class EOSMappingEngine(Observer):
     def update(self, message):
         if message["type"] == "key_press":
             if message["key"].startswith("EOS_"):
+                self.logger.info(f"Received EOS key press: {message}")
                 self._osc_client.send_message(f"/eos/user/1/key/{message['key'][4:]}", message["value"])
-            elif message["key"] == "FADER_PAGE_NEXT" and message["value"] == 0:
+                return
+            if message["key"] == "FADER_PAGE_NEXT" and message["value"] == 0:
                 self.eos_fader_bank.pageNext()
-            elif message["key"] == "FADER_PAGE_PREV" and message["value"] == 0:
+                return
+            if message["key"] == "FADER_PAGE_PREV" and message["value"] == 0:
                 self.eos_fader_bank.pagePrev()
-            elif message["key"].startswith("FADER_PAGE_") and message["value"] == 0:
+                return
+            if message["key"].startswith("FADER_PAGE_") and message["value"] == 0:
                 self.eos_fader_bank.setPage(int(message["key"][-1:]))
-        elif message["type"] == "fader" and message["origin"] != self:
-            self.eos_fader_bank.init_on_eos()
-            self.eos_fader_bank.faders[int(message["id"])-1].setValue(message["value"])
+                return
+            if message["key"].startswith("FADERB"):
+                type, id, action = message["key"].split("_")
+                try: 
+                    actions = {"FIRE": self.eos_fader_bank.get(int(id)).fire, "STOP": self.eos_fader_bank.get(int(id)).stop, "LOAD": self.eos_fader_bank.get(int(id)).load}
+                except Exception as e:
+                    self.logger.error(f"Error processing fader action: {e}")
+                    return
+                actions[action](message["value"])
+                return
+            self.logger.info(f"Unknown key press: {message}")
+            return
 
     def eos_osc_handler(self, unused_addr, *args):
         #self.logger.info(f"EOS OSC Handler received: '{unused_addr}' {args}")
@@ -44,8 +57,11 @@ class EOSMappingEngine(Observer):
         elif unused_addr.startswith("/eos/fader/"):
             #self.logger.debug(f"received fader message: {unused_addr.split('/')}={args[0]}")
             fader_id = int(unused_addr.split("/")[4])
-            fader_value = args[0]
-            self._state_manager.movingfader(fader_id, fader_value, self)
+            fader = self.eos_fader_bank.faders[fader_id - 1]
+            # Avoid rounding loops between EOS and the X-Touch
+            if abs(args[0] - fader.value) > 1/255.0:
+                fader.value=args[0]
+                self._state_manager.eosMovesFader(fader)
         elif unused_addr.startswith("/eos/out/fader/"):
             cmd=unused_addr.split('/')
             if len(cmd) >=7 and cmd[6]=="name": 
@@ -68,18 +84,38 @@ class EOSMappingEngine(Observer):
             self._state_manager.cue_playing(text_arr[0], ' '.join(text_arr[1:-2]), text_arr[-2])
         
 class EOSFader:
-    def __init__(self, osc_client, id, name):
+    def __init__(self, osc_client, bank, id, name):
         self._osc_client = osc_client
         self.id = id
         self.name = name
         self.type = None # Sub, Global FX, Inibit, etc.
         self.value = 0.0
+        self.bank = bank
+        self.fired = False
+
+    def fire(self, value):
+        self.fired = value
+        self._action("fire", value)
+
+    def stop(self, value):
+        self._action("stop", value)
+
+    def load(self, fader_id, value):
+        self._action("load", value)
+
+    def _action(self, action, value):
+        #/eos/user/1/fader/1/10/fire
+        self._osc_client.send_message(f"/eos/user/1/fader/{self.bank.eos_osc_id}/{self.id}/{action}", value)
 
     def setValue(self, value):
-        if value == self.value:
+        # Avoid rounding loops between EOS and the X-Touch
+        if abs(value - self.value) < 1/255.0:
             return
         self.value = value
-        self._osc_client.send_message(f"/eos/user/1/fader/1/{self.id}", value)
+        self.sync_value()
+
+    def sync_value(self):    
+        self._osc_client.send_message(f"/eos/user/1/fader/1/{self.id}", self.value)
 
     def setName(self, name):
         if name == self.name:
@@ -99,9 +135,12 @@ class EOSFaderBank:
         self.width = width
         self.active_page = 0
         self.eos_osc_id = 1
-        self.faders = [EOSFader(osc_client, i, f"Fader {i}") for i in range(1, width + 1)]
+        self.faders = [EOSFader(osc_client, self, i, f"Fader {i}") for i in range(1, width + 1)]
         self.initialized = False
         self.state_manager = state_manager
+
+    def get(self, fader_id):
+        return self.faders[fader_id - 1]
 
     def init_on_eos(self):
         if self.initialized:

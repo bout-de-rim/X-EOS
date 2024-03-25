@@ -59,14 +59,12 @@ class StateManager(Subject):
         self.programmer_state = "BLIND"
         self.notify_observers({"type": "goBlind"})
 
-    def movingfader(self,id,value,origin): 
-        if id not in self.state['faders']:
-            self.state['faders'][id]={}
-            self.state['faders'][id]["value"] = value
-        elif int(1000*self.state['faders'][id]["value"]) == int(1000*value):
-            return
-        self.state['faders'][id]["value"] = value
-        self.notify_observers({"type": "fader", "id": id, "value": value, "origin": origin})
+    def eosMovesFader(self, fader):
+        if not fader.fired:
+            self.xtouch.moveFader(fader.id, fader.value)
+
+    def xtouchMovesFader(self, id, value):
+            self.eos.eos_fader_bank.get(id).setValue(value)
 
     def namingfader(self,id,name): 
         #if id not in self.state['faders']:
@@ -88,8 +86,16 @@ class StateManager(Subject):
         self.xtouch.setScribbleText(1, id-1, target_name[:7])
         # colors: ["off", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
         faderColor = {"CL": "green", "S": "yellow", "IP":"yellow", "FP":"green", "CP":"white", "BP":"blue", "Pr":"cyan", "GM":"red", "Man":"green", "Global":"magenta", "":"off"}
-        
-        self.xtouch.setScribbleColor(id-1, faderColor[target_type] if target_type in faderColor else "white")
+        color="white"
+        if target_type not in faderColor:
+            import re
+            if re.match(r"^L[0-9]+$", target_type) is not None:
+                color="green"
+            else:
+                self.logger.warning(f"Unknown fader type: {target_type}")
+        else:
+            color = faderColor[target_type]
+        self.xtouch.setScribbleColor(id-1, color)
 
     def faderPageChanged(self,page):
         #self.logger.debug(f"Page changed to {page}")

@@ -37,7 +37,7 @@ if __name__ == "__main__":
     console_handler.setFormatter(formatter)
 
     # Ajouter le handler de console par défaut
-#    logger.addHandler(console_handler)
+    logger.addHandler(console_handler)
 
 
     try:
